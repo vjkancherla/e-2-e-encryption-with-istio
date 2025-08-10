@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "backend-app.fullname" . }}
+  namespace: my-demo
+  labels:
+    app: {{ include "backend-app.name" . }}
+    version: v1
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "backend-app.name" . }}
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: {{ include "backend-app.name" . }}
+        version: v1
+    spec:
+      containers:
+      - name: backend
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: 8080
+        command: 
+        - python
+        - /app/server.py
+        env:
+        - name: PORT
+          value: "8080"
+        volumeMounts:
+        - name: app-code
+          mountPath: /app
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: app-code
+        configMap:
+          name: {{ include "backend-app.fullname" . }}-code

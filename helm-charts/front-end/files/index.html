@@ -1,0 +1,273 @@
+# files/nginx.conf
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    # Define upstream with resolver to handle DNS resolution at runtime
+    resolver kube-dns.kube-system.svc.cluster.local valid=10s;
+    resolver_timeout 5s;
+
+    server {
+        listen 80;
+        server_name _;
+        root /usr/share/nginx/html;
+        index index.html;
+
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+
+        location /api/ {
+            # Use variable to force runtime DNS resolution
+            set $backend "{{ .Values.backend.service }}:{{ .Values.backend.port }}";
+            proxy_pass http://$backend/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            # Handle backend connection errors gracefully
+            proxy_connect_timeout 3s;
+            proxy_send_timeout 3s;
+            proxy_read_timeout 3s;
+            
+            # Custom error handling for backend unavailable
+            error_page 502 503 504 = @backend_unavailable;
+        }
+
+        # Basic health check - just checks if nginx is running
+        location /health {
+            return 200 "frontend healthy\n";
+            add_header Content-Type text/plain;
+        }
+
+        # Readiness check - verifies backend connectivity with graceful fallback
+        location /ready {
+            access_log off;
+            add_header Content-Type application/json;
+            
+            # Use variable for runtime DNS resolution
+            set $backend "{{ .Values.backend.service }}:{{ .Values.backend.port }}";
+            
+            # Try to reach the backend with short timeouts
+            proxy_pass http://$backend/health;
+            proxy_pass_request_body off;
+            proxy_set_header Content-Length "";
+            proxy_set_header X-Original-URI $request_uri;
+            proxy_connect_timeout 3s;
+            proxy_send_timeout 3s;
+            proxy_read_timeout 3s;
+            
+            # If backend is not available, return 503
+            error_page 502 503 504 = @backend_unavailable;
+        }
+
+        # Handle backend unavailable scenario
+        location @backend_unavailable {
+            add_header Content-Type application/json;
+            return 503 '{"status":"not_ready","reason":"backend_unavailable","message":"Backend service {{ .Values.backend.service }} is not available"}';
+        }
+    }
+}
+
+---
+# files/index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E2E Encryption Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .demo-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success {
+            background: rgba(46, 204, 113, 0.3);
+            color: #2ecc71;
+        }
+        .error {
+            background: rgba(231, 76, 60, 0.3);
+            color: #e74c3c;
+        }
+        .warning {
+            background: rgba(255, 193, 7, 0.3);
+            color: #ffc107;
+        }
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 E2E Encryption Demo</h1>
+        
+        <div class="demo-section">
+            <h3>🛡️ Encryption Status</h3>
+            <div id="gateway-tls" class="status">Checking Gateway TLS...</div>
+            <div id="service-mesh-tls" class="status">Checking Service Mesh TLS...</div>
+        </div>
+
+        <div class="demo-section">
+            <h3>🔄 Backend Connection Test</h3>
+            <button onclick="testBackend()">Test Backend</button>
+            <button onclick="checkProtocol()">Check Protocol</button>
+            <div id="backend-result" class="status"></div>
+        </div>
+
+        <div class="demo-section">
+            <h3>📊 Connection Info</h3>
+            <p><strong>Protocol:</strong> <span id="protocol"></span></p>
+            <p><strong>Host:</strong> <span id="host"></span></p>
+            <p><strong>Port Forward:</strong> <span id="port-forward"></span></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            checkEncryptionStatus();
+            updateConnectionInfo();
+        });
+
+        function checkEncryptionStatus() {
+            const isHttps = location.protocol === 'https:';
+            const isPortForward = location.port !== '' && location.port !== '80' && location.port !== '443';
+            const gatewayStatus = document.getElementById('gateway-tls');
+            const meshStatus = document.getElementById('service-mesh-tls');
+            
+            // Check Gateway TLS
+            if (isHttps) {
+                gatewayStatus.className = 'status success';
+                gatewayStatus.textContent = '✅ Gateway TLS: Enabled';
+            } else {
+                if (isPortForward) {
+                    gatewayStatus.className = 'status warning';
+                    gatewayStatus.textContent = '⚠️ Gateway TLS: Not applicable (Port Forward)';
+                } else {
+                    gatewayStatus.className = 'status error';
+                    gatewayStatus.textContent = '❌ Gateway TLS: Disabled';
+                }
+            }
+
+            // Check Service Mesh mTLS - need to detect if Istio is present
+            checkServiceMesh().then(isIstioPresent => {
+                if (isIstioPresent) {
+                    meshStatus.className = 'status success';
+                    meshStatus.textContent = '✅ Service Mesh: mTLS Active';
+                } else {
+                    if (isPortForward) {
+                        meshStatus.className = 'status warning';
+                        meshStatus.textContent = '⚠️ Service Mesh: Not deployed (Port Forward)';
+                    } else {
+                        meshStatus.className = 'status error';
+                        meshStatus.textContent = '❌ Service Mesh: Not deployed';
+                    }
+                }
+            });
+        }
+
+        async function checkServiceMesh() {
+            // Try to detect Istio by checking for Istio headers or sidecar indicators
+            try {
+                const response = await fetch('/api/info', { method: 'GET' });
+                const headers = response.headers;
+                
+                // Check for common Istio headers
+                const hasIstioHeaders = headers.get('x-envoy-upstream-service-time') || 
+                                       headers.get('server') === 'istio-envoy' ||
+                                       headers.get('x-envoy-decorator-operation');
+                
+                return hasIstioHeaders;
+            } catch (error) {
+                // If backend is not available, assume no Istio for now
+                return false;
+            }
+        }
+
+        function updateConnectionInfo() {
+            const isPortForward = location.port !== '' && location.port !== '80' && location.port !== '443';
+            
+            document.getElementById('protocol').textContent = location.protocol.toUpperCase();
+            document.getElementById('host').textContent = location.host;
+            document.getElementById('port-forward').textContent = isPortForward ? 'Yes (kubectl port-forward)' : 'No (Direct access)';
+        }
+
+        function testBackend() {
+            const resultDiv = document.getElementById('backend-result');
+            resultDiv.className = 'status warning';
+            resultDiv.textContent = 'Testing backend connection...';
+            
+            fetch('/api/health')
+                .then(response => response.json())
+                .then(data => {
+                    resultDiv.className = 'status success';
+                    resultDiv.textContent = `✅ Backend connection successful! Service: ${data.service}, Hostname: ${data.hostname}`;
+                })
+                .catch(error => {
+                    resultDiv.className = 'status error';
+                    resultDiv.textContent = '❌ Backend connection failed: ' + error.message;
+                });
+        }
+
+        function checkProtocol() {
+            const resultDiv = document.getElementById('backend-result');
+            const isHttps = location.protocol === 'https:';
+            const isPortForward = location.port !== '' && location.port !== '80' && location.port !== '443';
+            
+            if (isPortForward) {
+                resultDiv.className = 'status warning';
+                resultDiv.textContent = `⚠️ Using port-forward (${location.protocol}) - Deploy Istio Gateway for full E2E encryption`;
+            } else if (isHttps) {
+                resultDiv.className = 'status success';
+                resultDiv.textContent = `✅ Secure connection: ${location.protocol}`;
+            } else {
+                resultDiv.className = 'status error';
+                resultDiv.textContent = `❌ Insecure connection: ${location.protocol}`;
+            }
+        }
+    </script>
+</body>
+</html>

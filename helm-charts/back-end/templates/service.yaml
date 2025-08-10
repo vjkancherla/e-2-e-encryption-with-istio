@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "backend-app.fullname" . }}
+  namespace: my-demo
+  labels:
+    app: {{ include "backend-app.name" . }}
+    service: {{ include "backend-app.name" . }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  - port: {{ .Values.service.port }}
+    targetPort: 8080
+    name: http
+  selector:
+    app: {{ include "backend-app.name" . }}
+    version: v1

@@ -1,0 +1,14 @@
+# apiVersion: cert-manager.io/v1
+# kind: Certificate
+# metadata:
+#   name: {{ include "frontend-app.fullname" . }}-cert
+#   namespace: my-demo
+#   labels:
+#     app: {{ include "frontend-app.name" . }}
+# spec:
+#   secretName: frontend-tls
+#   issuerRef:
+#     name: ca-issuer
+#     kind: ClusterIssuer
+#   dnsNames:
+#   - demo-app.127.0.0.1.nip.io
