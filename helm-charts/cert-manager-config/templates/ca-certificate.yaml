@@ -1,0 +1,25 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Values.caCertificate.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "cert-manager-config.labels" . | nindent 4 }}
+spec:
+  isCA: true
+  commonName: {{ .Values.caCertificate.commonName | quote }}
+  secretName: {{ .Values.caCertificate.secretName }}
+  privateKey:
+    algorithm: {{ .Values.caCertificate.algorithm }}
+    size: {{ .Values.caCertificate.size }}
+  issuerRef:
+    name: {{ .Values.clusterIssuers.selfSigned.name }}
+    kind: ClusterIssuer
+    group: cert-manager.io
+  subject:
+    organizationalUnits:
+      - {{ .Values.caCertificate.organizationalUnit | quote }}
+    organizations:
+      - {{ .Values.caCertificate.organization | quote }}
+    countries:
+      - {{ .Values.caCertificate.country | quote }}

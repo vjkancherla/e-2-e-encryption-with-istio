@@ -1,0 +1,33 @@
+# helm-charts/istio-encryption-config/templates/gateway.yaml
+{{- if .Values.gateway.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: demo-app-gateway
+  namespace: istio-ingress
+  labels:
+    {{- include "istio-encryption-config.labels" . | nindent 4 }}
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  # HTTP server (redirect to HTTPS)
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - demo-app.127.0.0.1.nip.io
+    tls:
+      httpsRedirect: true
+  # HTTPS server
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - demo-app.127.0.0.1.nip.io
+    tls:
+      mode: SIMPLE
+      credentialName: demo-app-tls-secret
+{{- end }}

@@ -1,0 +1,24 @@
+{{- if .Values.certificate.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: demo-app-tls
+  namespace: istio-ingress  # Changed from istio-system
+  labels:
+    {{- include "istio-encryption-config.labels" . | nindent 4 }}
+spec:
+  secretName: demo-app-tls-secret
+  commonName: demo-app.127.0.0.1.nip.io
+  dnsNames:
+  - demo-app.127.0.0.1.nip.io
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+  duration: 8760h # 1 year
+  renewBefore: 720h # 30 days
+  usages:
+  - digital signature
+  - key encipherment
+  - server auth
+{{- end }}

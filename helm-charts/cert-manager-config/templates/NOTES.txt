@@ -1,0 +1,51 @@
+# helm-charts/cert-manager-config/templates/NOTES.txt
+🎉 Cert-Manager Configuration has been deployed!
+
+📋 Components installed:
+{{- if .Values.clusterIssuers.selfSigned.enabled }}
+✅ Self-signed ClusterIssuer: {{ .Values.clusterIssuers.selfSigned.name }}
+{{- end }}
+{{- if .Values.clusterIssuers.ca.enabled }}
+✅ CA ClusterIssuer: {{ .Values.clusterIssuers.ca.name }}
+{{- end }}
+✅ CA Certificate: {{ .Values.caCertificate.name }} (in {{ .Values.global.namespace }} namespace)
+{{- if .Values.testCertificate.enabled }}
+✅ Test Certificate: {{ .Values.testCertificate.name }} (in {{ .Values.testCertificate.namespace }} namespace)
+{{- end }}
+
+🔍 To verify your installation:
+
+1. Check ClusterIssuers:
+   kubectl get clusterissuer
+
+2. Check CA Certificate:
+   kubectl get certificate {{ .Values.caCertificate.name }} -n {{ .Values.global.namespace }}
+
+{{- if .Values.testCertificate.enabled }}
+3. Verify Test Certificate (this validates that cert-manager is working):
+   kubectl get certificate {{ .Values.testCertificate.name }} -n {{ .Values.testCertificate.namespace }}
+   
+   # Should show STATUS: True
+   kubectl describe certificate {{ .Values.testCertificate.name }} -n {{ .Values.testCertificate.namespace }}
+   
+   # Check the certificate secret was created:
+   kubectl get secret {{ .Values.testCertificate.secretName }} -n {{ .Values.testCertificate.namespace }}
+   
+   # Validate certificate details:
+   kubectl get secret {{ .Values.testCertificate.secretName }} -n {{ .Values.testCertificate.namespace }} -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -noout -text | head -20
+{{- end }}
+
+4. All certificates overview:
+   kubectl get certificates -A
+
+🚀 Your cert-manager is now ready to issue certificates for your Istio setup!
+
+✅ **Verification Success**: If the test certificate shows "Ready=True", your cert-manager setup is working correctly!
+
+Next steps:
+- Configure Istio Gateway with TLS
+- Create certificates for your applications (demo-app.127.0.0.1.nip.io)
+- Set up VirtualService and DestinationRule
+- Enable mTLS with PeerAuthentication
+
+📚 For more information, check the documentation in your repository.

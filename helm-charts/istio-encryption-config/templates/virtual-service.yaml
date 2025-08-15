@@ -1,0 +1,34 @@
+# helm-charts/istio-encryption-config/templates/virtual-service.yaml
+{{- if .Values.virtualService.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: demo-app-vs
+  namespace: my-demo
+  labels:
+    {{- include "istio-encryption-config.labels" . | nindent 4 }}
+spec:
+  hosts:
+  - demo-app.127.0.0.1.nip.io
+  gateways:
+  - istio-system/demo-app-gateway
+  http:
+  # Backend API routes (must come first - more specific)
+  - match:
+    - uri:
+        prefix: /api/
+    route:
+    - destination:
+        host: backend-app
+        port:
+          number: 8080
+  # Frontend routes (catch-all, must come last)
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: frontend-app
+        port:
+          number: 80
+{{- end }}

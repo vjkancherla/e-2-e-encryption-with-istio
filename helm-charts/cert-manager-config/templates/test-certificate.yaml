@@ -1,0 +1,24 @@
+# helm-charts/cert-manager-config/templates/test-certificate.yaml
+{{- if .Values.testCertificate.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Values.testCertificate.name }}
+  namespace: {{ .Values.testCertificate.namespace }}
+  labels:
+    {{- include "cert-manager-config.labels" . | nindent 4 }}
+    app.kubernetes.io/component: test-certificate
+spec:
+  secretName: {{ .Values.testCertificate.secretName }}
+  commonName: {{ .Values.testCertificate.commonName }}
+  dnsNames:
+  {{- range .Values.testCertificate.dnsNames }}
+  - {{ . | quote }}
+  {{- end }}
+  issuerRef:
+    name: {{ .Values.clusterIssuers.ca.name }}
+    kind: ClusterIssuer
+    group: cert-manager.io
+  duration: 8760h # 1 year
+  renewBefore: 720h # 30 days
+{{- end }}

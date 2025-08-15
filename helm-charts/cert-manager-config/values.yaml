@@ -1,0 +1,36 @@
+# helm-charts/cert-manager-config/values.yaml
+
+# Global configuration
+global:
+  namespace: cert-manager
+
+# CA Certificate configuration
+caCertificate:
+  name: ca-certificate
+  commonName: "Demo App Root CA"
+  secretName: ca-key-pair
+  organization: "Local Development"
+  organizationalUnit: "Demo App"
+  country: "US"
+  algorithm: ECDSA
+  size: 256
+
+# ClusterIssuer configuration
+clusterIssuers:
+  selfSigned:
+    name: selfsigned-issuer
+    enabled: true
+  
+  ca:
+    name: ca-issuer
+    enabled: true
+
+# Test certificate configuration
+testCertificate:
+  enabled: true
+  name: test-cert
+  namespace: cert-manager
+  secretName: test-cert-secret
+  commonName: test.127.0.0.1.nip.io
+  dnsNames:
+    - test.127.0.0.1.nip.io

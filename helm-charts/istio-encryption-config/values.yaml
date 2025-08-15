@@ -1,0 +1,14 @@
+certificate:
+  enabled: true
+
+gateway:
+  enabled: true
+
+virtualService:
+  enabled: true
+
+destinationRule:
+  enabled: true
+
+peerAuthentication:
+  enabled: true
