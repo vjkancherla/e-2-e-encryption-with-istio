@@ -1,75 +1,48 @@
-# helm-charts/istio-encryption-config/templates/NOTES.txt
-🎉 Istio E2E Encryption Configuration has been deployed!
-
-📋 Components deployed:
+Istio E2E Encryption Configuration Deployed
+Components Deployed
 {{- if .Values.certificate.enabled }}
-✅ TLS Certificate: demo-app-tls for demo-app.127.0.0.1.nip.io (in istio-system)
+
+TLS Certificate: demo-app-tls for demo-app.127.0.0.1.nip.io (in istio-ingress)
 {{- end }}
 {{- if .Values.gateway.enabled }}
-✅ Istio Gateway: demo-app-gateway (configures existing ingress gateway)
+
+Istio Gateway: demo-app-gateway (in istio-ingress, configures existing ingress gateway)
 {{- end }}
 {{- if .Values.virtualService.enabled }}
-✅ VirtualService: demo-app-vs (routes /api/ → backend-app, / → frontend-app)
+
+VirtualService: demo-app-vs (routes /api/ → backend-app, / → frontend-app)
 {{- end }}
 {{- if .Values.destinationRule.enabled }}
-✅ DestinationRules: frontend-app-dr, backend-app-dr (mTLS enabled)
+
+DestinationRules: frontend-app-dr, backend-app-dr (mTLS enabled)
 {{- end }}
 {{- if .Values.peerAuthentication.enabled }}
-✅ PeerAuthentication: default-peer-auth (strict mTLS in my-demo namespace)
+
+PeerAuthentication: default-peer-auth (strict mTLS in my-demo namespace)
 {{- end }}
 
-🌐 Your application will be available at:
-   https://demo-app.127.0.0.1.nip.io
+Application Access
+https://demo-app.127.0.0.1.nip.io
 
-🔍 Quick verification:
+Verification Commands
+Check certificate:
+kubectl get certificate demo-app-tls -n istio-ingress
+kubectl describe certificate demo-app-tls -n istio-ingress
 
-1. Check certificate:
-   kubectl get certificate demo-app-tls -n istio-system
-   kubectl describe certificate demo-app-tls -n istio-system
+Check gateway:
+kubectl get gateway demo-app-gateway -n istio-ingress
+kubectl describe gateway demo-app-gateway -n istio-ingress
 
-2. Check gateway:
-   kubectl get gateway demo-app-gateway -n istio-system
-   kubectl describe gateway demo-app-gateway -n istio-system
+Check routing:
+kubectl get virtualservice demo-app-vs -n my-demo
+kubectl describe virtualservice demo-app-vs -n my-demo
 
-3. Check routing:
-   kubectl get virtualservice demo-app-vs -n my-demo
-   kubectl describe virtualservice demo-app-vs -n my-demo
+Check mTLS configuration:
+kubectl get destinationrule -n my-demo
+kubectl get peerauthentication default-peer-auth -n my-demo
 
-4. Check mTLS configuration:
-   kubectl get destinationrule -n my-demo
-   kubectl get peerauthentication default-peer-auth -n my-demo
-
-5. Test access (K3D port-forward):
-   kubectl port-forward -n istio-system svc/istio-ingressgateway 8443:443 8080:80
-   
-   # Test HTTP redirect
-   curl -v http://demo-app.127.0.0.1.nip.io:8080
-   
-   # Test HTTPS frontend
-   curl -k -v https://demo-app.127.0.0.1.nip.io:8443
-   
-   # Test HTTPS backend API
-   curl -k -v https://demo-app.127.0.0.1.nip.io:8443/api/
-
-🏗️ Architecture:
-Web Browser → HTTPS → Istio Ingress Gateway → Frontend/Backend Apps
-                           ↑                      ↑
-                   TLS Certificate           mTLS enabled
-
-🔒 E2E Encryption Features:
-- ✅ HTTPS termination at istio-ingressgateway
-- ✅ HTTP → HTTPS redirect enabled
-- ✅ TLS certificate: demo-app-tls-secret (auto-renewal)
-- ✅ Strict mTLS between frontend-app and backend-app
-- ✅ Traffic routing: /api/ → backend-app:8080, / → frontend-app:80
-
-📚 Next steps:
-1. Create my-demo namespace: kubectl create namespace my-demo
-2. Enable sidecar injection: kubectl label namespace my-demo istio-injection=enabled
-3. Install your frontend and backend applications
-4. Test the complete E2E encryption flow
-
-🎯 Troubleshooting:
-- Certificate issues: kubectl describe certificate demo-app-tls -n istio-system
-- Gateway issues: kubectl logs -n istio-system -l app=istio-ingressgateway
-- mTLS issues: istioctl authn tls-check -n my-demo (after apps are deployed)
+Test access (K3D port-forward):
+kubectl port-forward -n istio-ingress svc/istio-ingressgateway 8443:443 8080:80
+curl -v http://demo-app.127.0.0.1.nip.io:8080
+curl -k -v https://demo-app.127.0.0.1.nip.io:8443
+curl -k -v https://demo-app.127.0.0.1.nip.io:8443/api/

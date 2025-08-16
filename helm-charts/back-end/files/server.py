@@ -13,21 +13,20 @@ PORT = int(os.environ.get('PORT', 8080))
 class SimpleBackendHandler(http.server.BaseHTTPRequestHandler):
     
     def do_GET(self):
-        """Handle GET requests"""
-        if self.path == '/health':
+        """Handle GET requests with /api prefix"""
+        if self.path == '/api/health':
             self.send_health_response()
-        elif self.path == '/info':
+        elif self.path == '/api/info':
             self.send_info_response()
-        elif self.path.startswith('/echo/'):
-            # Extract message from path
-            message = self.path[6:]  # Remove '/echo/' prefix
+        elif self.path.startswith('/api/echo/'):
+            message = self.path[10:]  # Remove '/api/echo/' prefix
             self.send_echo_response(message)
         else:
             self.send_not_found()
-    
+
     def do_POST(self):
-        """Handle POST requests"""
-        if self.path == '/echo':
+        """Handle POST requests with /api prefix"""
+        if self.path == '/api/echo':
             self.handle_echo_post()
         else:
             self.send_not_found()
@@ -119,19 +118,18 @@ class SimpleBackendHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(json_data.encode('utf-8'))
     
     def send_not_found(self):
-        """Send 404 response"""
+        """Update 404 response to show /api prefixed endpoints"""
         error_data = {
             'error': 'Endpoint not found',
             'path': self.path,
             'available_endpoints': [
-                '/health',
-                '/info', 
-                '/echo/{message}',
-                'POST /echo'
+                'GET /api/health',
+                'GET /api/info', 
+                'GET /api/echo/{message}',
+                'POST /api/echo'
             ],
             'timestamp': datetime.now().isoformat()
         }
-        
         self.send_json_response(404, error_data)
     
     def do_OPTIONS(self):

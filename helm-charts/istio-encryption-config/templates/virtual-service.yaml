@@ -11,7 +11,7 @@ spec:
   hosts:
   - demo-app.127.0.0.1.nip.io
   gateways:
-  - istio-system/demo-app-gateway
+  - istio-ingress/demo-app-gateway
   http:
   # Backend API routes (must come first - more specific)
   - match:
